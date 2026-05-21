@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "631538881426",
+    "project_id": "gen-lang-client-0241356219",
+    "storage_bucket": "gen-lang-client-0241356219.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:631538881426:android:dde73d29dac88fa471274b",
+        "android_client_info": {
+          "package_name": "com.gracecode.network"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "631538881426-grfl39vr97v9bsnnrmc7l74fkr06oq6q.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyASigI3g8JSgLMGaawXN_7f88n1dPDALKc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "631538881426-grfl39vr97v9bsnnrmc7l74fkr06oq6q.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
