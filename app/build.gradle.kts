@@ -71,4 +71,10 @@ dependencies {
     
     // Coroutines support for smooth background operations
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.7.3")
+    // ... your other dependencies
+
+    // Google Credential Manager (Unified Login SDK)
+    implementation("androidx.credentials:credentials:1.2.2")
+    implementation("androidx.credentials:credentials-play-services-auth:1.2.2")
+    implementation("com.google.android.libraries.identity.googleid:googleid:1.1.1")
 }
