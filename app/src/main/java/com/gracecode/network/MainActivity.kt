@@ -31,6 +31,7 @@ import androidx.credentials.exceptions.GetCredentialException
 import com.google.android.libraries.identity.googleid.GetGoogleIdOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import com.google.firebase.auth.PhoneAuthProvider
+import com.gracecode.network.ui.theme.WeColabaiTheme
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 
@@ -39,13 +40,14 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         setContent {
             WeColabaiTheme {
+                // A surface container using the 'background' color from the theme
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
                     val currentUser by FirebaseManager.currentUserFlow.collectAsState()
                     val context = LocalContext.current
-                    var showWebView by remember { mutableStateOf(true) }
+                    var showWebView by remember { mutableStateOf(false) } // Default to Native Dashboard
 
                     if (currentUser == null) {
                         AuthScreen(

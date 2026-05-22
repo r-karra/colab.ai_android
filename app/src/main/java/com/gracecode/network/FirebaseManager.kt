@@ -56,7 +56,16 @@ object FirebaseManager {
                 }
             }
             .addOnFailureListener { exception ->
-                Log.e(TAG, "Error sync-fetching user profile", exception)
+                Log.e(TAG, "Error fetching user profile, using fallback", exception)
+                // Fallback to basic info from Auth if Firestore fails (e.g. database not initialized)
+                val fallbackUser = User(
+                    id = uid,
+                    uid = uid,
+                    displayName = auth.currentUser?.displayName ?: "User",
+                    email = auth.currentUser?.email ?: "",
+                    phoneNumber = auth.currentUser?.phoneNumber ?: ""
+                )
+                _currentUserFlow.value = fallbackUser
             }
     }
 
