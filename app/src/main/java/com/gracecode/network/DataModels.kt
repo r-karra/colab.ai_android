@@ -7,6 +7,7 @@ data class User(
     val uid: String = "",
     val displayName: String = "",
     val email: String = "",
+    val phoneNumber: String = "",
     val bio: String = "",
     val expertise: String = "",
     val skills: List<String> = emptyList()
