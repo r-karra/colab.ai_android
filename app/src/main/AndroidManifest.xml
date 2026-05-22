@@ -1,8 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:tools="http://schemas.android.com/tools">
-    <!-- Required permissions -->
+    package="com.gracecode.network">
+
+    <!-- Add this internet line if it isn't already present -->
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Required permissions -->
+   
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 
     <application
