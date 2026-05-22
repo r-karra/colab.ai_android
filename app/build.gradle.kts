@@ -60,4 +60,15 @@ dependencies {
     implementation("androidx.compose.material:material-icons-core")
     // Extended Compose Material Icons (includes search, settings, profile, etc.)
     implementation("androidx.compose.material:material-icons-extended")
+    // Standard Jetpack Compose dependencies (already present in your project)
+    implementation("androidx.activity:activity-compose:1.8.2")
+    implementation(platform("androidx.compose:compose-bom:2023.08.00"))
+    implementation("androidx.compose.ui:ui")
+    implementation("androidx.compose.material3:material3")
+
+    // Google Sign-In Dependency (CRITICAL)
+    implementation("com.google.android.gms:play-services-auth:21.2.0")
+    
+    // Coroutines support for smooth background operations
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.7.3")
 }
