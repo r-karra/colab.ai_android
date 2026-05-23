@@ -4,7 +4,6 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -13,6 +12,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.tooling.preview.Preview
+import com.gracecode.network.ui.theme.WeColabaiTheme
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -227,4 +228,12 @@ fun ProposalDialog(onDismiss: () -> Unit, onProposalCreated: () -> Unit) {
             TextButton(onClick = onDismiss) { Text("Cancel") }
         }
     )
+}
+
+@Preview(showBackground = true)
+@Composable
+fun HomeScreenPreview() {
+    WeColabaiTheme {
+        HomeScreen()
+    }
 }
