@@ -1,20 +1,13 @@
 package com.gracecode.network
 
-import android.annotation.SuppressLint
 import android.app.Activity
 import android.os.Bundle
-import android.util.Log
-import android.webkit.WebSettings
-import android.webkit.WebView
-import android.webkit.WebViewClient
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -24,49 +17,97 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.viewinterop.AndroidView
-import androidx.credentials.CredentialManager
-import androidx.credentials.GetCredentialRequest
-import androidx.credentials.exceptions.GetCredentialException
-import com.google.android.libraries.identity.googleid.GetGoogleIdOption
-import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.currentBackStackEntryAsState
+import androidx.navigation.compose.rememberNavController
 import com.google.firebase.auth.PhoneAuthProvider
 import com.gracecode.network.ui.theme.WeColabaiTheme
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
             WeColabaiTheme {
-                // A surface container using the 'background' color from the theme
-                Surface(
-                    modifier = Modifier.fillMaxSize(),
-                    color = MaterialTheme.colorScheme.background
-                ) {
-                    val currentUser by FirebaseManager.currentUserFlow.collectAsState()
-                    val context = LocalContext.current
-                    var showWebView by remember { mutableStateOf(false) } // Default to Native Dashboard
-
-                    if (currentUser == null) {
-                        AuthScreen(
-                            onAuthSuccess = {
-                                Toast.makeText(context, "Welcome back!", Toast.LENGTH_SHORT).show()
-                            }
-                        )
-                    } else {
-                        if (showWebView) {
-                            AppWebViewShell(
-                                onSwitchToNative = { showWebView = false }
-                            )
-                        } else {
-                            MainDashboard(user = currentUser!!, onSwitchToWeb = { showWebView = true })
-                        }
+                val currentUser by FirebaseManager.currentUserFlow.collectAsState()
+                
+                if (currentUser == null) {
+                    AuthScreen {
+                        // Auth state listener handles navigation
                     }
+                } else {
+                    MainAppShell(user = currentUser!!)
                 }
             }
         }
+    }
+}
+
+sealed class Screen(val route: String, val label: String, val icon: androidx.compose.ui.graphics.vector.ImageVector) {
+    object Home : Screen("home", "Feed", Icons.Default.Home)
+    object Projects : Screen("projects", "Projects", Icons.Default.Work)
+    object Network : Screen("network", "Network", Icons.Default.Public)
+    object Alerts : Screen("alerts", "Alerts", Icons.Default.Notifications)
+    object Profile : Screen("profile", "Profile", Icons.Default.Person)
+}
+
+@Composable
+fun MainAppShell(user: User) {
+    val navController = rememberNavController()
+    val navBackStackEntry by navController.currentBackStackEntryAsState()
+    val currentRoute = navBackStackEntry?.destination?.route
+
+    val screens = listOf(
+        Screen.Home,
+        Screen.Projects,
+        Screen.Network,
+        Screen.Alerts,
+        Screen.Profile
+    )
+
+    Scaffold(
+        bottomBar = {
+            NavigationBar(
+                containerColor = MaterialTheme.colorScheme.surface,
+                tonalElevation = 0.dp
+            ) {
+                screens.forEach { screen ->
+                    NavigationBarItem(
+                        icon = { Icon(screen.icon, contentDescription = screen.label) },
+                        label = { Text(screen.label, fontSize = 10.sp) },
+                        selected = currentRoute == screen.route,
+                        onClick = {
+                            if (currentRoute != screen.route) {
+                                navController.navigate(screen.route) {
+                                    popUpTo(navController.graph.startDestinationId) {
+                                        saveState = true
+                                    }
+                                    launchSingleTop = true
+                                    restoreState = true
+                                }
+                            }
+                        }
+                    )
+                }
+            }
+        }
+    ) { padding ->
+        Box(modifier = Modifier.padding(padding)) {
+            NavHost(navController = navController, startDestination = Screen.Home.route) {
+                composable(Screen.Home.route) { HomeScreen() }
+                composable(Screen.Projects.route) { ProjectsScreen() }
+                composable(Screen.Network.route) { PlaceholderScreen("Network") }
+                composable(Screen.Alerts.route) { PlaceholderScreen("Notifications") }
+                composable(Screen.Profile.route) { ProfileScreen(user = user) }
+            }
+        }
+    }
+}
+
+@Composable
+fun PlaceholderScreen(name: String) {
+    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        Text("$name Coming Soon", style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.outline)
     }
 }
 
@@ -264,245 +305,6 @@ fun AuthScreen(onAuthSuccess: () -> Unit) {
                     modifier = Modifier.padding(top = 4.dp)
                 ) {
                     Text(if (isSignUp) "Already have an account? Sign In" else "New to the platform? Create Account")
-                }
-            }
-        }
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@SuppressLint("SetJavaScriptEnabled", "JavascriptInterface")
-@Composable
-fun AppWebViewShell(onSwitchToNative: () -> Unit) {
-    val context = LocalContext.current
-    val coroutineScope = rememberCoroutineScope()
-    
-    // Web application URL - you can swap this configuration easily
-    val appUrl = "https://ais-pre-smcbipak7hxdd2q72oeo6r-47851105980.asia-east1.run.app"
-    val webClientId = "631538881426-grfl39vr97v9bsnnrmc7l74fkr06oq6q.apps.googleusercontent.com"
-
-    val credentialManager = remember { CredentialManager.create(context) }
-
-    // Keeps reference to evaluate JavaScript later
-    var webViewInstance: WebView? = null
-
-    // Google Sign-In orchestration
-    val triggerNativeSignIn: () -> Unit = {
-        coroutineScope.launch {
-            try {
-                // Configure Google ID Option (Identity Credential Manager)
-                val googleIdOption = GetGoogleIdOption.Builder()
-                    .setFilterByAuthorizedAccounts(false)
-                    .setServerClientId(webClientId)
-                    .setAutoSelectEnabled(true)
-                    .build()
-
-                val request = GetCredentialRequest.Builder()
-                    .addCredentialOption(googleIdOption)
-                    .build()
-
-                Log.d("AndroidBridge", "Launching Native Credential Manager...")
-                val result = credentialManager.getCredential(
-                    context = context,
-                    request = request
-                )
-
-                // Process acquired sign in credentials
-                when (val credential = result.credential) {
-                    is GoogleIdTokenCredential -> {
-                        val idToken = credential.idToken
-                        Log.d("AndroidBridge", "Token received! Injecting to webapp...")
-                        
-                        // Inject into Next.js Web App
-                        webViewInstance?.post {
-                            webViewInstance?.evaluateJavascript(
-                                "window.signInWithAndroidToken(\"$idToken\")"
-                            ) { reply ->
-                                Log.d("AndroidBridge", "Web app evaluated token: $reply")
-                            }
-                        }
-                    }
-                    else -> {
-                        Log.w("AndroidBridge", "Unknown credential type received.")
-                    }
-                }
-            } catch (e: GetCredentialException) {
-                Log.e("AndroidBridge", "Credential retrieval failed", e)
-                Toast.makeText(context, "Sign-in cancelled or failed: ${e.localizedMessage}", Toast.LENGTH_SHORT).show()
-            } catch (e: Exception) {
-                Log.e("AndroidBridge", "Unexpected exception during Sign-In", e)
-            }
-        }
-    }
-
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("WeColab.ai (Web)", fontSize = 18.sp) },
-                actions = {
-                    IconButton(onClick = onSwitchToNative) {
-                        Icon(Icons.Default.Dashboard, contentDescription = "Native Dashboard")
-                    }
-                    IconButton(onClick = { FirebaseManager.signOut() }) {
-                        Icon(Icons.Default.Logout, contentDescription = "Sign Out")
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer,
-                    titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                )
-            )
-        }
-    ) { padding ->
-        // AndroidView holds the system web container
-        AndroidView(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding),
-            factory = { ctx ->
-                WebView(ctx).apply {
-                    webViewInstance = this
-                    webViewClient = object : WebViewClient() {
-                        override fun onReceivedError(
-                            view: WebView?,
-                            errorCode: Int,
-                            description: String?,
-                            failingUrl: String?
-                        ) {
-                            Log.e("WebViewError", "Error $errorCode: $description at $failingUrl")
-                            if (failingUrl?.startsWith(appUrl) == true) {
-                                Toast.makeText(context, "Web App Error. Try Native Mode.", Toast.LENGTH_LONG).show()
-                            }
-                        }
-
-                        override fun onPageFinished(view: WebView?, url: String?) {
-                            super.onPageFinished(view, url)
-                            Log.d("WebView", "Finished loading: $url")
-                        }
-                    }
-                    
-                    settings.apply {
-                        javaScriptEnabled = true
-                        domStorageEnabled = true
-                        databaseEnabled = true
-                        loadWithOverviewMode = true
-                        useWideViewPort = true
-                        mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
-                        userAgentString = "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36"
-                        allowFileAccess = true
-                        allowContentAccess = true
-                    }
-
-                    addJavascriptInterface(
-                        WebAppInterface(
-                            onLaunchGoogleSignIn = triggerNativeSignIn,
-                            onLaunchPhoneSignIn = {
-                                Toast.makeText(context, "Switching to Native Mobile Login...", Toast.LENGTH_SHORT).show()
-                                FirebaseManager.signOut() 
-                            }
-                        ),
-                        "AndroidBridge"
-                    )
-
-                    loadUrl(appUrl)
-                }
-            },
-            update = { webView ->
-                webViewInstance = webView
-            }
-        )
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun MainDashboard(user: User, onSwitchToWeb: () -> Unit) {
-    var projects by remember { mutableStateOf<List<Project>>(emptyList()) }
-    var posts by remember { mutableStateOf<List<Post>>(emptyList()) }
-    var isLoading by remember { mutableStateOf(true) }
-
-    LaunchedEffect(Unit) {
-        FirebaseManager.getProjects(
-            onSuccess = { projects = it },
-            onFailure = { Log.e("Dashboard", "Failed to load projects", it) }
-        )
-        FirebaseManager.getPosts(
-            onSuccess = { 
-                posts = it
-                isLoading = false
-            },
-            onFailure = { 
-                Log.e("Dashboard", "Failed to load posts", it)
-                isLoading = false
-            }
-        )
-    }
-
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("WeColab Dashboard") },
-                actions = {
-                    IconButton(onClick = onSwitchToWeb) {
-                        Icon(Icons.Default.Web, contentDescription = "Switch to Web")
-                    }
-                    IconButton(onClick = { FirebaseManager.signOut() }) {
-                        Icon(Icons.Default.Logout, contentDescription = "Sign Out")
-                    }
-                }
-            )
-        }
-    ) { padding ->
-        if (isLoading) {
-            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator()
-            }
-        } else {
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding)
-                    .padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                item {
-                    Text("Welcome, ${user.displayName.ifEmpty { "Contributor" }}!", style = MaterialTheme.typography.headlineSmall)
-                    Text(user.email.ifEmpty { user.phoneNumber }, color = MaterialTheme.colorScheme.outline)
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Text("Latest Projects", style = MaterialTheme.typography.titleMedium)
-                }
-
-                if (projects.isEmpty()) {
-                    item { Text("No projects found. Firestore might be offline.", color = MaterialTheme.colorScheme.error) }
-                } else {
-                    items(projects) { project ->
-                        Card(
-                            modifier = Modifier.fillMaxWidth(),
-                            elevation = CardDefaults.cardElevation(2.dp)
-                        ) {
-                            Column(Modifier.padding(16.dp)) {
-                                Text(project.name, style = MaterialTheme.typography.titleSmall)
-                                Text(project.description, style = MaterialTheme.typography.bodyMedium, maxLines = 2)
-                            }
-                        }
-                    }
-                }
-
-                item {
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Text("Community Posts", style = MaterialTheme.typography.titleMedium)
-                }
-
-                if (posts.isEmpty()) {
-                    item { Text("No posts yet.") }
-                } else {
-                    items(posts) { post ->
-                        Column(Modifier.padding(vertical = 8.dp)) {
-                            Text(post.authorName, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
-                            Text(post.content)
-                            HorizontalDivider(Modifier.padding(top = 8.dp))
-                        }
-                    }
                 }
             }
         }

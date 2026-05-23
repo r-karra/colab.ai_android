@@ -47,7 +47,8 @@ object FirebaseManager {
                         displayName = auth.currentUser?.displayName ?: "User",
                         email = auth.currentUser?.email ?: "",
                         phoneNumber = auth.currentUser?.phoneNumber ?: "",
-                        bio = "Hi there! I am using WeColabai.",
+                        photoURL = auth.currentUser?.photoUrl?.toString() ?: "",
+                        bio = "Hi there! I am using GraceCode.",
                         expertise = "Contributor",
                         skills = emptyList()
                     )
@@ -57,13 +58,14 @@ object FirebaseManager {
             }
             .addOnFailureListener { exception ->
                 Log.e(TAG, "Error fetching user profile, using fallback", exception)
-                // Fallback to basic info from Auth if Firestore fails (e.g. database not initialized)
+                // Fallback to basic info from Auth if Firestore fails
                 val fallbackUser = User(
                     id = uid,
                     uid = uid,
                     displayName = auth.currentUser?.displayName ?: "User",
                     email = auth.currentUser?.email ?: "",
-                    phoneNumber = auth.currentUser?.phoneNumber ?: ""
+                    phoneNumber = auth.currentUser?.phoneNumber ?: "",
+                    photoURL = auth.currentUser?.photoUrl?.toString() ?: ""
                 )
                 _currentUserFlow.value = fallbackUser
             }
@@ -153,6 +155,7 @@ object FirebaseManager {
                     uid = uid,
                     displayName = displayName,
                     email = email,
+                    photoURL = "", // Can be updated later
                     expertise = expertise,
                     skills = skills
                 )
